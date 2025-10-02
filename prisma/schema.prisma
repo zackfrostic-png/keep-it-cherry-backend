@@ -1,0 +1,51 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Vehicle {
+  id        String           @id @default(cuid())
+  make      String
+  model     String
+  year      Int
+  vin       String?          @unique
+  mileage   Int?
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  // Relations
+  services  ServiceRecord[]
+}
+
+model Service {
+  id          String           @id @default(cuid())
+  name        String
+  description String?
+  intervalMi  Int?             // Recommended service interval in miles
+  intervalMo  Int?             // Recommended interval in months
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  // Relations
+  records     ServiceRecord[]
+}
+
+model ServiceRecord {
+  id          String    @id @default(cuid())
+  performedAt DateTime  @default(now())
+  mileage     Int?
+  notes       String?
+
+  // Foreign keys
+  vehicleId   String
+  serviceId   String
+
+  vehicle     Vehicle   @relation(fields: [vehicleId], references: [id])
+  service     Service   @relation(fields: [serviceId], references: [id])
+}
