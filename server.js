@@ -23,9 +23,9 @@ app.get("/", (req, res) => {
   res.json({ message: "🚀 Keep It Cherry backend is running with Postgres!" });
 });
 
-/* ----------------------------------------
-   🚘 Vehicles API
----------------------------------------- */
+/* ------------------------------------------------------------------
+   🚘 VEHICLES API
+------------------------------------------------------------------ */
 
 // ✅ Create a new vehicle
 app.post("/api/vehicles", async (req, res) => {
@@ -55,9 +55,8 @@ app.post("/api/vehicles", async (req, res) => {
 app.get("/api/vehicles", async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, year, make, model, mileage::text, created_at 
-       FROM vehicles 
-       ORDER BY id DESC`
+      `SELECT id, year, make, model, mileage::text, created_at
+       FROM vehicles ORDER BY id DESC`
     );
     res.json(result.rows);
   } catch (err) {
@@ -66,7 +65,7 @@ app.get("/api/vehicles", async (req, res) => {
   }
 });
 
-// ✅ Update mileage
+// ✅ Update vehicle mileage
 app.patch("/api/vehicles/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -74,16 +73,12 @@ app.patch("/api/vehicles/:id", async (req, res) => {
     if (isNaN(miles)) return res.status(400).json({ error: "Mileage must be a number" });
 
     const result = await pool.query(
-      `UPDATE vehicles
-       SET mileage = $1
-       WHERE id = $2
+      `UPDATE vehicles SET mileage = $1 WHERE id = $2
        RETURNING id, year, make, model, mileage::text, created_at`,
       [miles, id]
     );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Vehicle not found" });
-    }
+    if (result.rows.length === 0) return res.status(404).json({ error: "Vehicle not found" });
 
     res.json(result.rows[0]);
   } catch (err) {
@@ -97,9 +92,7 @@ app.delete("/api/vehicles/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query(`DELETE FROM vehicles WHERE id = $1`, [id]);
-    if (result.rowCount === 0) {
-      return res.status(404).json({ error: "Vehicle not found" });
-    }
+    if (result.rowCount === 0) return res.status(404).json({ error: "Vehicle not found" });
     res.json({ success: true, deletedId: id });
   } catch (err) {
     console.error("❌ Database error (DELETE /api/vehicles/:id):", err);
@@ -107,14 +100,69 @@ app.delete("/api/vehicles/:id", async (req, res) => {
   }
 });
 
-/* ----------------------------------------
-   📊 Vehicle Catalog API (fixed table name)
----------------------------------------- */
+/* ------------------------------------------------------------------
+   🛠️ SERVICE HISTORY API
+------------------------------------------------------------------ */
+
+// ✅ Add a new service record
+app.post("/api/services", async (req, res) => {
+  try {
+    const { vehicle_id, service_name, mileage, interval, service_date, cost, notes } = req.body;
+    if (!vehicle_id || !service_name) {
+      return res.status(400).json({ error: "vehicle_id and service_name are required" });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO service_history (vehicle_id, service_name, mileage, interval, service_date, cost, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       RETURNING *`,
+      [vehicle_id, service_name, mileage, interval || null, service_date || null, cost || null, notes || null]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error("❌ Database error (POST /api/services):", err);
+    res.status(500).json({ error: "Failed to create service record" });
+  }
+});
+
+// ✅ Get all service records (optionally filter by vehicle)
+app.get("/api/services", async (req, res) => {
+  try {
+    const { vehicle_id } = req.query;
+    const result = await pool.query(
+      vehicle_id
+        ? `SELECT * FROM service_history WHERE vehicle_id = $1 ORDER BY service_date DESC`
+        : `SELECT * FROM service_history ORDER BY service_date DESC`,
+      vehicle_id ? [vehicle_id] : []
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("❌ Database error (GET /api/services):", err);
+    res.status(500).json({ error: "Failed to fetch service records" });
+  }
+});
+
+// ✅ Delete a service record
+app.delete("/api/services/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(`DELETE FROM service_history WHERE id = $1`, [id]);
+    if (result.rowCount === 0) return res.status(404).json({ error: "Service record not found" });
+    res.json({ success: true, deletedId: id });
+  } catch (err) {
+    console.error("❌ Database error (DELETE /api/services/:id):", err);
+    res.status(500).json({ error: "Failed to delete service record" });
+  }
+});
+
+/* ------------------------------------------------------------------
+   📊 VEHICLE CATALOG API
+------------------------------------------------------------------ */
 
 app.get("/api/catalog", async (req, res) => {
   try {
     const { year, make, model } = req.query;
-
     let conditions = [];
     let values = [];
 
@@ -151,9 +199,9 @@ app.get("/api/catalog", async (req, res) => {
   }
 });
 
-/* ----------------------------------------
+/* ------------------------------------------------------------------
    ✅ Start the server
----------------------------------------- */
+------------------------------------------------------------------ */
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`✅ API running on port ${PORT}`);
 });
