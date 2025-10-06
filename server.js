@@ -108,7 +108,7 @@ app.delete("/api/vehicles/:id", async (req, res) => {
 });
 
 /* ----------------------------------------
-   📊 Vehicle Catalog API
+   📊 Vehicle Catalog API (fixed table name)
 ---------------------------------------- */
 
 app.get("/api/catalog", async (req, res) => {
@@ -136,7 +136,7 @@ app.get("/api/catalog", async (req, res) => {
     const result = await pool.query(
       `
       SELECT year, make, model, trim, engine, transmission
-      FROM vehicle_catalog_master
+      FROM vehicle_catalog
       ${whereClause}
       ORDER BY year DESC, make ASC, model ASC
       LIMIT 50000
