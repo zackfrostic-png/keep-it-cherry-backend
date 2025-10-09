@@ -1,4 +1,3 @@
-// server.js
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
@@ -65,6 +64,17 @@ app.get("/api/vehicles", async (req, res) => {
   }
 });
 
+// ✅ Delete ALL vehicles
+app.delete("/api/vehicles/all", async (req, res) => {
+  try {
+    await pool.query("TRUNCATE TABLE vehicles RESTART IDENTITY CASCADE");
+    res.json({ success: true, message: "All vehicles deleted." });
+  } catch (err) {
+    console.error("❌ Error deleting all vehicles:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ✅ Update vehicle mileage
 app.patch("/api/vehicles/:id", async (req, res) => {
   try {
@@ -103,6 +113,17 @@ app.delete("/api/vehicles/:id", async (req, res) => {
 /* ------------------------------------------------------------------
    🛠️ SERVICE HISTORY API
 ------------------------------------------------------------------ */
+
+// ✅ Delete ALL service records (safe and cascades)
+app.delete("/api/services/all", async (req, res) => {
+  try {
+    await pool.query("TRUNCATE TABLE service_history RESTART IDENTITY CASCADE");
+    res.json({ success: true, message: "All service records deleted." });
+  } catch (err) {
+    console.error("❌ Error deleting all services:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // ✅ Add a new service record
 app.post("/api/services", async (req, res) => {
@@ -143,7 +164,7 @@ app.get("/api/services", async (req, res) => {
   }
 });
 
-// ✅ Delete a service record
+// ✅ Delete a single service record
 app.delete("/api/services/:id", async (req, res) => {
   try {
     const { id } = req.params;
